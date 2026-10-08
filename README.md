@@ -1,14 +1,15 @@
-# Site · Dra. Patrícia Moreira, Cirurgiã-Dentista
+# Site · Dra. Carolina Leal, Odontologia Especializada
 
-Landing page institucional do consultório em Samambaia (DF), focada em gerar agendamentos pelo WhatsApp.
-HTML + CSS + JavaScript puro, sem dependências nem etapa de build.
+Site institucional da clínica no Guará II (Brasília-DF), focado em gerar agendamentos pelo WhatsApp.
+HTML, CSS e JavaScript puros, sem dependências nem etapa de build.
+
+> O repositório se chama `dr-patricia-moreira` porque abrigava o site de outra cliente. Esse site antigo continua no histórico do Git (commit `feb17b8`).
 
 ## Como rodar
 
 Basta abrir o `index.html` no navegador. Para testar como em produção (recomendado), sirva a pasta localmente:
 
 ```bash
-cd site-dra-patricia
 python3 -m http.server 8080
 # acesse http://localhost:8080
 ```
@@ -18,13 +19,12 @@ Para publicar, envie a pasta inteira para qualquer hospedagem estática (Netlify
 ## Estrutura
 
 ```
-site-dra-patricia/
 ├── index.html            # todo o conteúdo e as seções
 ├── css/styles.css        # estilos (tokens no topo, mobile-first)
-├── js/main.js            # menu, animações, comparador, horários e formulário
+├── js/main.js            # menu, animações, abas, carrossel, horários e formulário
 └── assets/
-    ├── img/              # fotos otimizadas em WebP + imagem de compartilhamento
-    └── icons/favicon.svg # monograma PM
+    ├── img/              # fachada em WebP (480 e 765px) + imagem de compartilhamento
+    └── icons/favicon.svg # dente da marca em fundo cobalto
 ```
 
 ## Como editar
@@ -33,34 +33,41 @@ site-dra-patricia/
 |---|---|
 | Cores, fontes, espaçamentos | `css/styles.css`, bloco `:root` (design tokens) |
 | Textos das seções | `index.html`, cada seção tem um comentário `<!-- ===== NOME ===== -->` |
-| Lista de tratamentos | `index.html`, `<ol class="treatment-list">` e o `<select id="tratamento">` do formulário |
-| Telefone do WhatsApp | links `wa.me/5561992871031` no `index.html` e a constante `WHATSAPP` em `js/main.js` |
-| Horários | tabela em `index.html` **e** o array `HOURS` em `js/main.js` (usado para "Aberto agora") |
+| Tratamentos | `index.html`: um botão `role="tab"` + um painel `role="tabpanel"` por tratamento, e o `<select id="tratamento">` do formulário |
+| Telefone do WhatsApp | links `wa.me/5561995158616` no `index.html` e a constante `WHATSAPP` em `js/main.js` |
+| Horários | tabela em `index.html` **e** o objeto `HOURS` em `js/main.js` (usado no "Aberto agora") |
 | Depoimentos | seção `#depoimentos` em `index.html` |
-| CRO-DF | rodapé do `index.html` (atual: CRO-DF 17048) |
 
-### Imagens
-
-- **Retrato:** `assets/img/dra-patricia-480/720/918.webp`. Para trocar, gere as três larguras (mesma proporção) com o mesmo nome.
-- **Antes/depois:** `assets/img/antes.webp` e `depois.webp`, recortadas da imagem enviada, com o mesmo enquadramento (574×280). Novos casos precisam do mesmo tamanho e alinhamento.
-- **Compartilhamento (Open Graph):** `assets/img/og-image.jpg` (1200×630).
-- Para incluir fotos do consultório (recepção, cadeira, equipe), use WebP com até ~1200px de largura, `loading="lazy"`, `width`/`height` definidos.
-
-## Decisões de design
-
-- **Paleta** tirada das fotos da marca: linho `#F6F1EA`, areia `#E8DED1`, café `#2A1F1A`, argila `#9A4A33` (CTAs) e dourado `#B8976B` (detalhes). Todas as combinações de texto passam no contraste WCAG AA.
-- **Fontes:** Fraunces (títulos) + Outfit (texto), via Google Fonts.
-- Retrato em arco, lista editorial numerada no lugar de cards, depoimento em destaque e comparador antes/depois arrastável.
-
-## Acessibilidade e desempenho
-
-- HTML semântico, link "Pular para o conteúdo", foco visível, menu mobile com `aria-expanded`, Esc para fechar e foco preso dentro do menu.
-- FAQ com `<details>` nativo; comparador antes/depois é um `input range` (funciona por teclado).
-- Animações com IntersectionObserver, desligadas com `prefers-reduced-motion`.
-- Alvos de toque ≥ 44px, sem rolagem horizontal (testado em 360, 768, 1024 e 1440px).
-- Dados estruturados `schema.org/Dentist` para o Google, meta tags de SEO e Open Graph.
+Procure por `TROCAR` e `CONFIRMAR` no `index.html` para achar tudo o que ainda é provisório.
 
 ## Pendências antes de publicar
 
-1. Confirmar a lista de tratamentos e ajustar a pergunta sobre formas de pagamento/convênios.
-2. Trocar o domínio `drapatriciamoreira.com.br` nas tags `canonical` e `og:url` pelo domínio real.
+1. **Depoimentos:** os quatro atuais são exemplos. Troque por avaliações reais (ex.: Google), com autorização dos pacientes.
+2. **Fotos provisórias do Unsplash:** retrato da Dra. (seção Sobre) e três fotos da galeria. Substitua por fotos reais em WebP, até ~1200px de largura. Se uma foto externa não carregar, o espaço aparece em azul-claro, sem quebrar o layout.
+3. **CRO-DF** da responsável técnica no rodapé (`[número]`), exigido em publicidade odontológica.
+4. Confirmar a **lista de especialidades**, a formação da Dra. na seção Sobre e as respostas sobre **convênios e pagamento**.
+5. Incluir o **Instagram** no rodapé (linha comentada) e trocar o domínio `dracarolinaleal.com.br` nas tags `canonical`, `og:url`, `og:image` e no JSON-LD.
+
+## Decisões de design
+
+- **Conceito:** a fachada azul com o reflexo do céu e o dente branco da marca. No topo, a foto real da fachada aparece dentro da silhueta do dente, que se desenha ao abrir a página, sobre um "céu" cobalto com nuvens lentas.
+- **Paleta:** cobalto `#1F45C9` (marca e botões), noite `#0D1A3A` (texto e rodapé), porcelana `#F4F7FB` (fundo), céu `#D6E3FF` (apoio) e sol `#FFC94D` (detalhes). Combinações de texto passam no contraste WCAG AA.
+- **Fontes:** Young Serif (títulos) + Schibsted Grotesk (texto), via Google Fonts, carregadas sem bloquear a renderização.
+- **Tratamentos** em painel com abas, em vez de cards repetidos. A primeira consulta é numerada porque é uma sequência real, com uma linha que se preenche ao rolar.
+
+## Animações
+
+- Entrada do topo: título linha a linha, contorno do dente desenhado e foto revelada.
+- Elementos entram suavemente ao rolar (IntersectionObserver), em cascata.
+- Troca animada entre tratamentos, carrossel de depoimentos, FAQ com ícone animado, menu mobile com cortina.
+- Tudo desliga com `prefers-reduced-motion`.
+
+## Acessibilidade e desempenho
+
+- HTML semântico, link "Pular para o conteúdo", foco visível, menu mobile com `aria-expanded`, Esc para fechar e foco preso no menu.
+- Abas no padrão WAI-ARIA (setas, Home e End), carrossel navegável por teclado e botões, FAQ com `<details>` nativo.
+- Formulário com rótulos, mensagens de erro claras e máscara de telefone. Não envia nada para servidor: monta a mensagem e abre o WhatsApp.
+- "Aberto agora" e o dia de hoje na tabela calculados no fuso de Brasília.
+- Alvos de toque ≥ 44px, sem rolagem horizontal (testado em 360, 768, 1024 e 1440px).
+- Lighthouse (mobile, servidor local): 100 em Performance, Acessibilidade, Boas práticas e SEO.
+- Dados estruturados `schema.org/Dentist`, meta tags de SEO, Open Graph e favicon.

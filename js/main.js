@@ -1,157 +1,277 @@
 /* ==========================================================================
-   Dra. Patrícia Moreira · interações do site
-   Sem dependências. Cada bloco é independente e só roda se o elemento existir.
+   Dra. Carolina Leal · interações do site
+   Menu, entrada do topo, revelar ao rolar, abas, passos, carrossel,
+   status "aberto agora", horários, formulário para WhatsApp.
    ========================================================================== */
-(function () {
+(() => {
   'use strict';
 
-  document.documentElement.classList.add('js');
+  const WHATSAPP = '5561995158616';
+  // Horário em minutos desde 0h, por dia da semana (0 = domingo). Edite junto com a tabela no HTML.
+  const HOURS = {
+    0: null,
+    1: [8 * 60, 18 * 60], 2: [8 * 60, 18 * 60], 3: [8 * 60, 18 * 60],
+    4: [8 * 60, 18 * 60], 5: [8 * 60, 18 * 60],
+    6: [8 * 60, 12 * 60],
+  };
+  const DAY_NAMES = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
-  var WHATSAPP = '5561992871031';
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+  /* ---------- Entrada do topo ---------- */
+  requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.add('is-loaded')));
+
+  /* ---------- Header: sombra ao rolar + WhatsApp flutuante ---------- */
+  const header = $('[data-header]');
+  const waFloat = $('[data-wa-float]');
+  const hero = $('.hero');
+  const onScroll = () => {
+    const y = window.scrollY;
+    header.classList.toggle('is-scrolled', y > 8);
+    if (waFloat && hero) waFloat.classList.toggle('is-visible', y > hero.offsetHeight * 0.7);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
   /* ---------- Menu mobile acessível ---------- */
-  var toggle = document.querySelector('[data-menu-toggle]');
-  var menu = document.querySelector('[data-menu]');
-  var label = document.querySelector('[data-menu-label]');
-  var desktop = window.matchMedia('(min-width: 1024px)');
+  const toggle = $('[data-menu-toggle]');
+  const menu = $('[data-menu]');
+  const label = $('[data-menu-label]');
+  const desktop = window.matchMedia('(min-width: 1024px)');
 
-  function setMenu(open) {
+  const setMenu = (open) => {
     toggle.setAttribute('aria-expanded', String(open));
     label.textContent = open ? 'Fechar menu' : 'Abrir menu';
     menu.classList.toggle('is-open', open);
-    document.body.classList.toggle('menu-open', open);
-    if (open) {
-      var first = menu.querySelector('a');
-      if (first) first.focus();
+    document.body.style.overflow = open ? 'hidden' : '';
+    if (open) $('a', menu).focus();
+  };
+  toggle.addEventListener('click', () => setMenu(toggle.getAttribute('aria-expanded') !== 'true'));
+  menu.addEventListener('click', (e) => { if (e.target.closest('a') && !desktop.matches) setMenu(false); });
+  document.addEventListener('keydown', (e) => {
+    if (toggle.getAttribute('aria-expanded') !== 'true') return;
+    if (e.key === 'Escape') { setMenu(false); toggle.focus(); }
+    // Mantém o foco dentro do menu aberto
+    if (e.key === 'Tab') {
+      const items = [toggle, ...$$('a', menu)];
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
-  }
+  });
+  desktop.addEventListener('change', () => setMenu(false));
 
-  if (toggle && menu) {
-    toggle.addEventListener('click', function () {
-      setMenu(toggle.getAttribute('aria-expanded') !== 'true');
-    });
-    // Fecha ao clicar em um link do menu
-    menu.addEventListener('click', function (e) {
-      if (e.target.closest('a') && !desktop.matches) setMenu(false);
-    });
-    // Esc fecha e devolve o foco ao botão; Tab fica preso dentro do menu aberto
-    document.addEventListener('keydown', function (e) {
-      if (!menu.classList.contains('is-open')) return;
-      if (e.key === 'Escape') { setMenu(false); toggle.focus(); return; }
-      if (e.key === 'Tab') {
-        var items = [toggle].concat(Array.prototype.slice.call(menu.querySelectorAll('a')));
-        var firstEl = items[0], lastEl = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
-        else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
-      }
-    });
-    // Ao ir para o desktop, garante o menu "fechado" (estado neutro)
-    desktop.addEventListener('change', function () { if (desktop.matches) setMenu(false); });
-  }
-
-  /* ---------- Header com borda ao rolar ---------- */
-  var header = document.querySelector('[data-header]');
-  function onScroll() { header.classList.toggle('is-scrolled', window.scrollY > 8); }
-  if (header) { onScroll(); window.addEventListener('scroll', onScroll, { passive: true }); }
-
-  /* ---------- Animações de entrada com IntersectionObserver ---------- */
-  var reveals = document.querySelectorAll('.reveal');
-  if (!reduceMotion && 'IntersectionObserver' in window) {
-    // Pequeno atraso escalonado entre irmãos para um efeito de cascata sutil
-    reveals.forEach(function (el) {
-      var siblings = Array.prototype.filter.call(el.parentElement.children, function (c) { return c.classList.contains('reveal'); });
-      el.style.setProperty('--delay', Math.min(siblings.indexOf(el), 5) * 0.07 + 's');
-    });
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) { entry.target.classList.add('is-visible'); io.unobserve(entry.target); }
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
-    reveals.forEach(function (el) { io.observe(el); });
-  } else {
-    reveals.forEach(function (el) { el.classList.add('is-visible'); });
-  }
-
-  /* ---------- Destaque do link ativo no menu ---------- */
+  /* ---------- Link ativo no menu conforme a seção ---------- */
+  const navLinks = $$('.nav-list a');
+  const sections = navLinks.map((a) => $(a.getAttribute('href'))).filter(Boolean);
   if ('IntersectionObserver' in window) {
-    var links = document.querySelectorAll('.nav-list a');
-    var map = {};
-    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
-    var spy = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        var link = map[entry.target.id];
-        if (link && entry.isIntersecting) {
-          links.forEach(function (l) { l.removeAttribute('aria-current'); });
-          link.setAttribute('aria-current', 'true');
-        }
+    const navObs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        navLinks.forEach((a) => {
+          const active = a.getAttribute('href') === '#' + entry.target.id;
+          a.classList.toggle('is-active', active);
+          if (active) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+        });
       });
     }, { rootMargin: '-45% 0px -50% 0px' });
-    Object.keys(map).forEach(function (id) { var s = document.getElementById(id); if (s) spy.observe(s); });
+    sections.forEach((s) => navObs.observe(s));
   }
 
-  /* ---------- Comparador antes/depois ---------- */
-  var compare = document.querySelector('[data-compare]');
-  var range = document.querySelector('[data-compare-range]');
-  if (compare && range) {
-    var update = function () { compare.style.setProperty('--pos', range.value + '%'); };
-    range.addEventListener('input', update);
+  /* ---------- Revelar ao rolar (com pequeno escalonamento) ---------- */
+  const reveals = $$('.reveal');
+  if (reduceMotion || !('IntersectionObserver' in window)) {
+    reveals.forEach((el) => el.classList.add('is-visible'));
+  } else {
+    // Escalona elementos irmãos para entrarem em cascata
+    reveals.forEach((el) => {
+      const siblings = [...el.parentElement.children].filter((c) => c.classList.contains('reveal'));
+      const i = siblings.indexOf(el);
+      if (i > 0) el.style.setProperty('--delay', `${Math.min(i, 5) * 0.08}s`);
+    });
+    const revealObs = new IntersectionObserver((entries, obs) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) { entry.target.classList.add('is-visible'); obs.unobserve(entry.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    reveals.forEach((el) => revealObs.observe(el));
+  }
+
+  /* ---------- Passos da primeira consulta: linha que se preenche ---------- */
+  const stepList = $('[data-steps]');
+  if (stepList) {
+    const updateSteps = () => {
+      const r = stepList.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const p = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (r.height + vh * 0.35)));
+      stepList.style.setProperty('--progress', `${(reduceMotion ? 1 : p) * 100}%`);
+    };
+    window.addEventListener('scroll', updateSteps, { passive: true });
+    window.addEventListener('resize', updateSteps);
+    updateSteps();
+  }
+
+  /* ---------- Abas de tratamentos (padrão WAI-ARIA tabs) ---------- */
+  const tabsRoot = $('[data-tabs]');
+  if (tabsRoot) {
+    const tabs = $$('[role="tab"]', tabsRoot);
+    const select = (tab, focus = true) => {
+      tabs.forEach((t) => {
+        const selected = t === tab;
+        t.setAttribute('aria-selected', String(selected));
+        t.tabIndex = selected ? 0 : -1;
+        const panel = document.getElementById(t.getAttribute('aria-controls'));
+        panel.hidden = !selected;
+        if (selected && !reduceMotion) {
+          panel.classList.remove('is-entering');
+          void panel.offsetWidth; // reinicia a animação
+          panel.classList.add('is-entering');
+        }
+      });
+      if (focus) tab.focus();
+      tab.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+    };
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => select(tab, false));
+      tab.addEventListener('keydown', (e) => {
+        const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+        let next = null;
+        if (e.key in keys) next = tabs[(i + keys[e.key] + tabs.length) % tabs.length];
+        if (e.key === 'Home') next = tabs[0];
+        if (e.key === 'End') next = tabs[tabs.length - 1];
+        if (next) { e.preventDefault(); select(next); }
+      });
+    });
+  }
+
+  /* ---------- Carrossel de depoimentos (scroll-snap + botões) ---------- */
+  const carousel = $('[data-carousel]');
+  if (carousel) {
+    const track = $('[data-carousel-track]', carousel);
+    const items = $$('.quote', track);
+    const prev = $('[data-carousel-prev]');
+    const next = $('[data-carousel-next]');
+    const status = $('[data-carousel-status]');
+    let current = 0;
+
+    const step = () => items[1] ? items[1].offsetLeft - items[0].offsetLeft : track.clientWidth;
+    const update = () => {
+      current = Math.round(track.scrollLeft / step());
+      const perView = Math.max(1, Math.round(track.clientWidth / step()));
+      items.forEach((it, i) => it.classList.toggle('is-current', i >= current && i < current + perView));
+      prev.disabled = track.scrollLeft < 4;
+      next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
+    };
+    const go = (dir) => track.scrollBy({ left: dir * step(), behavior: reduceMotion ? 'auto' : 'smooth' });
+    prev.addEventListener('click', () => go(-1));
+    next.addEventListener('click', () => go(1));
+    let t;
+    track.addEventListener('scroll', () => {
+      update();
+      clearTimeout(t);
+      t = setTimeout(() => { status.textContent = `Depoimento ${current + 1} de ${items.length}`; }, 250);
+    }, { passive: true });
+    track.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    });
+    window.addEventListener('resize', update);
     update();
   }
 
-  /* ---------- Horários: destaca o dia de hoje e mostra se está aberto ---------- */
-  // Horários no formato [abre, fecha] em minutos; null = fechado. Índice 0 = domingo.
-  var HOURS = [null, [480, 1260], [480, 1080], [480, 1260], [480, 1080], [480, 1260], [480, 1080]];
-  var status = document.querySelector('[data-open-status]');
-  try {
-    // Usa o fuso de Brasília independente do fuso de quem acessa
-    var parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date());
-    var get = function (t) { return (parts.find(function (p) { return p.type === t; }) || {}).value; };
-    var day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
-    var mins = (parseInt(get('hour'), 10) % 24) * 60 + parseInt(get('minute'), 10);
-    var row = document.querySelector('.hours-table tr[data-day="' + day + '"]');
-    if (row) row.classList.add('is-today');
-    if (status && day > -1) {
-      var h = HOURS[day];
-      var open = h && mins >= h[0] && mins < h[1];
-      var fmt = function (m) { return String(Math.floor(m / 60)).padStart(2, '0') + 'h'; };
-      status.textContent = open ? 'Aberto agora · até as ' + fmt(h[1]) : 'Fechado agora · chame no WhatsApp para agendar';
-      status.classList.toggle('is-open', !!open);
+  /* ---------- Fotos provisórias: se não carregarem, fica o bloco na cor da marca ---------- */
+  $$('img[src*="unsplash"]').forEach((img) => {
+    const fail = () => img.parentElement.classList.add('img-failed');
+    if (img.complete && img.naturalWidth === 0) fail();
+    img.addEventListener('error', fail);
+  });
+
+  /* ---------- Horário de Brasília: "aberto agora" e dia de hoje ---------- */
+  const nowInBrasilia = () => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
+    }).formatToParts(new Date());
+    const get = (type) => parts.find((p) => p.type === type).value;
+    const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
+    return { day, minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+  };
+  const fmt = (m) => `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}`;
+
+  const { day, minutes } = nowInBrasilia();
+  $$('.hours tr[data-days]').forEach((tr) => {
+    if (tr.dataset.days.split(',').map(Number).includes(day)) tr.classList.add('is-today');
+  });
+
+  const statusEl = $('[data-status]');
+  if (statusEl) {
+    const text = $('[data-status-text]', statusEl);
+    const today = HOURS[day];
+    if (today && minutes >= today[0] && minutes < today[1]) {
+      statusEl.classList.add('is-open');
+      text.textContent = `Aberto agora, até as ${fmt(today[1])}`;
+    } else {
+      // Procura o próximo dia/horário de abertura
+      let msg = '';
+      if (today && minutes < today[0]) msg = `Abre hoje às ${fmt(today[0])}`;
+      else {
+        for (let i = 1; i <= 7; i++) {
+          const d = (day + i) % 7;
+          if (HOURS[d]) { msg = `Abre ${i === 1 ? 'amanhã' : DAY_NAMES[d]} às ${fmt(HOURS[d][0])}`; break; }
+        }
+      }
+      text.textContent = `Fechado agora. ${msg}`;
     }
-  } catch (err) { /* navegadores antigos: a tabela continua visível normalmente */ }
+    statusEl.hidden = false;
+  }
 
-  /* ---------- Formulário → WhatsApp ---------- */
-  var form = document.querySelector('[data-contact-form]');
+  /* ---------- Formulário: valida e abre o WhatsApp com a mensagem ---------- */
+  const form = $('[data-form]');
   if (form) {
-    var showError = function (input, show) {
-      var msg = document.getElementById(input.id + '-erro');
-      input.setAttribute('aria-invalid', show ? 'true' : 'false');
-      if (show) input.setAttribute('aria-describedby', msg.id); else input.removeAttribute('aria-describedby');
-      msg.hidden = !show;
+    const fields = {
+      nome: { el: form.nome, err: $('#nome-erro'), ok: (v) => v.trim().length >= 2 },
+      telefone: { el: form.telefone, err: $('#tel-erro'), ok: (v) => v.replace(/\D/g, '').length >= 10 },
     };
+    const check = (f) => {
+      const valid = f.ok(f.el.value);
+      f.el.setAttribute('aria-invalid', String(!valid));
+      f.err.hidden = valid;
+      return valid;
+    };
+    Object.values(fields).forEach((f) => f.el.addEventListener('blur', () => { if (f.el.value) check(f); }));
 
-    form.addEventListener('submit', function (e) {
+    // Máscara simples de telefone: (61) 99999-9999
+    form.telefone.addEventListener('input', () => {
+      const d = form.telefone.value.replace(/\D/g, '').slice(0, 11);
+      let out = d;
+      if (d.length > 2) out = `(${d.slice(0, 2)}) ${d.slice(2)}`;
+      if (d.length > 7) out = `(${d.slice(0, 2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}`;
+      form.telefone.value = out;
+    });
+
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      var nome = form.nome, tel = form.telefone;
-      var nomeOk = nome.value.trim().length >= 2;
-      var telOk = tel.value.replace(/\D/g, '').length >= 10;
-      showError(nome, !nomeOk);
-      showError(tel, !telOk);
-      if (!nomeOk) { nome.focus(); return; }
-      if (!telOk) { tel.focus(); return; }
-
-      var text = 'Olá, Dra. Patrícia! Gostaria de agendar uma consulta.\n\n' +
-        'Nome: ' + nome.value.trim() + '\n' +
-        'Telefone: ' + tel.value.trim() + '\n' +
-        'Interesse: ' + form.tratamento.value + '\n' +
-        'Melhor período: ' + form.periodo.value +
-        (form.mensagem.value.trim() ? '\nMensagem: ' + form.mensagem.value.trim() : '');
-
-      window.open('https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+      const results = Object.values(fields).map(check);
+      if (results.includes(false)) {
+        Object.values(fields).find((f) => f.el.getAttribute('aria-invalid') === 'true').el.focus();
+        return;
+      }
+      const data = new FormData(form);
+      const lines = [
+        `Olá, Dra. Carolina! Meu nome é ${data.get('nome').trim()}.`,
+        `Gostaria de agendar: ${data.get('tratamento')}.`,
+        `Melhor período: ${data.get('periodo')}.`,
+        `Telefone: ${data.get('telefone')}.`,
+      ];
+      const msg = data.get('mensagem').trim();
+      if (msg) lines.push('', msg);
+      window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+      $('[data-form-note]').textContent = 'Mensagem pronta no WhatsApp. Confirme o envio por lá.';
     });
   }
 
-  /* ---------- Ano automático no rodapé ---------- */
-  var year = document.querySelector('[data-year]');
+  /* ---------- Ano no rodapé ---------- */
+  const year = $('[data-year]');
   if (year) year.textContent = new Date().getFullYear();
 })();
